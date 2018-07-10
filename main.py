@@ -48,10 +48,20 @@ class AnyDevice(gatt.Device):
         print("[recv] {}".format(characteristic.uuid))
         if characteristic.uuid.startswith("b5f90072"):
             cmd=input(">> ")
+            if cmd == "exit":
+                exit()
             if cmd == "record start":
                 characteristic.write_value(bytearray(b'\x02\x01\x01'))
             if cmd == "record stop":
                 characteristic.write_value(bytearray(b'\x02\x01\x00'))
+            if cmd == "mode video":
+                characteristic.write_value(bytearray(b'\x03\x02\x01\x00'))
+            if cmd == "mode photo":
+                characteristic.write_value(bytearray(b'\x03\x02\x01\x01'))
+            if cmd == "mode multishot":
+                characteristic.write_value(bytearray(b'\x03\x02\x01\x02'))
+            if cmd == "poweroff":
+                characteristic.write_value(bytearray(b'\x01\x04'))
         #exit()
 
 device = AnyDevice(mac_address=mac_address, manager=manager)
