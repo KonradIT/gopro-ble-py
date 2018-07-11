@@ -62,6 +62,12 @@ class AnyDevice(gatt.Device):
                 characteristic.write_value(bytearray(b'\x03\x02\x01\x02'))
             if cmd == "poweroff":
                 characteristic.write_value(bytearray(b'\x01\x04'))
+            if cmd == "tag":
+                characteristic.write_value(bytearray(b'\x01\x18'))
+            if cmd == "wifi off":
+                characteristic.write_value(bytearray(b'\x03\x17\x01\x00'))
+            if cmd == "wifi on":
+                characteristic.write_value(bytearray(b'\x03\x17\x01\x01'))
         #exit()
 
 device = AnyDevice(mac_address=mac_address, manager=manager)
