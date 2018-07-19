@@ -39,7 +39,6 @@ class AnyDevice(gatt.Device):
 
         time.sleep(5)
         for i in control_service.characteristics:
-            #i.write_value(bytearray(b'\x02\x01\x01'))
             print(i.uuid)
             if i.uuid.startswith("b5f90072"):
                 i.write_value(bytearray(b'\x02\x01\x01'))
@@ -61,9 +60,15 @@ class AnyDevice(gatt.Device):
             if cmd == "mode multishot":
                 characteristic.write_value(bytearray(b'\x03\x02\x01\x02'))
             if cmd == "poweroff":
+                characteristic.write_value(bytearray(b'\x01\x05'))
+            if cmd == "poweroff-force":
                 characteristic.write_value(bytearray(b'\x01\x04'))
             if cmd == "tag":
                 characteristic.write_value(bytearray(b'\x01\x18'))
+            if cmd == "locate on":
+            	characteristic.write_value(bytearray(b'\x03\x16\x01\x01'))
+            if cmd == "locate off":
+            	characteristic.write_value(bytearray(b'\x03\x16\x01\x00'))
             if cmd == "wifi off":
                 characteristic.write_value(bytearray(b'\x03\x17\x01\x00'))
             if cmd == "wifi on":
