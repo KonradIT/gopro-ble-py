@@ -4,7 +4,7 @@ from goprocam import GoProCamera, constants
 import time
 
 
-gopro = GoProCamera.GoPro()
+#gopro = GoProCamera.GoPro()
 def discover_camera():
     cameras=[]
     service = DiscoveryService()
@@ -17,9 +17,9 @@ def discover_camera():
         exit()
     if len(cameras) == 1:
         return cameras[0][1]
-    for i, index in enumerate(cameras):
+    for index, i in enumerate(cameras):
         print("[{}] {} - {}".format(index, i[0], i[1]))
-    return cameras[input("ENTER BT GoPro ADDR: ")][1]
+    return cameras[int(input("ENTER BT GoPro ADDR: "))][1]
 
 mac_address=discover_camera()
 
@@ -29,7 +29,7 @@ class AnyDevice(gatt.Device):
     def connect_succeeded(self):
         super().connect_succeeded()
         print("[%s] Connected" % (self.mac_address))
-        gopro.pair(usepin=False)
+        #gopro.pair(usepin=False)
 
     def services_resolved(self):
         super().services_resolved()

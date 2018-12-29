@@ -1,6 +1,6 @@
 # gopro-ble-py
 
-Python Bluetooth controller for HERO 5 Black 
+Python Bluetooth controller for HERO 5 Black and HERO7 Black
 
 ## How to run:
 
