@@ -2,13 +2,17 @@ from bluetooth.ble import DiscoveryService
 import gatt
 from goprocam import GoProCamera, constants
 import time
+import logging
+import commands
 
+logger = logging.getLogger('GoPro BLE')
+logger.setLevel(logging.DEBUG)
 
-#gopro = GoProCamera.GoPro()
 def discover_camera():
     cameras=[]
     service = DiscoveryService()
     devices = service.discover(2)
+
     for address, name in devices.items():
         if name.startswith("GoPro"):
             cameras.append([name,address])
@@ -23,6 +27,7 @@ def discover_camera():
 
 mac_address=discover_camera()
 
+
 manager = gatt.DeviceManager(adapter_name='hci0')
 class AnyDevice(gatt.Device):
 
@@ -35,13 +40,30 @@ class AnyDevice(gatt.Device):
         super().services_resolved()
         control_service = next(
             s for s in self.services
-            if s.uuid == '0000fea6-0000-1000-8000-00805f9b34fb')
+            if s.uuid == commands.Characteristics.Control)
 
         time.sleep(5)
+        
+        device_information_service = next(
+            s for s in self.services
+            if s.uuid == commands.Characteristics.Info)
+        
+        firmware_version_characteristic = next(
+            c for c in device_information_service.characteristics
+            if c.uuid == commands.Characteristics.FirmwareVersion)
+            
+        serial_number_characteristic = next(
+            c for c in device_information_service.characteristics
+            if c.uuid == commands.Characteristics.SerialNumber)
+            
+        firmware_version_characteristic.read_value()
+        serial_number_characteristic.read_value()
+
+        
         for i in control_service.characteristics:
             print(i.uuid)
             if i.uuid.startswith("b5f90072"):
-                i.write_value(bytearray(b'\x02\x01\x01'))
+                i.write_value(bytearray(b'\x03\x02\x01\x00'))
         pass
     def characteristic_write_value_succeeded(self, characteristic):
         print("[recv] {}".format(characteristic.uuid))
@@ -49,32 +71,41 @@ class AnyDevice(gatt.Device):
             cmd=input(">> ")
             if cmd == "exit":
                 exit()
-            if cmd == "record start":
-                characteristic.write_value(bytearray(b'\x02\x01\x01'))
-            if cmd == "record stop":
-                characteristic.write_value(bytearray(b'\x02\x01\x00'))
-            if cmd == "mode video":
-                characteristic.write_value(bytearray(b'\x03\x02\x01\x00'))
-            if cmd == "mode photo":
-                characteristic.write_value(bytearray(b'\x03\x02\x01\x01'))
-            if cmd == "mode multishot":
-                characteristic.write_value(bytearray(b'\x03\x02\x01\x02'))
-            if cmd == "poweroff":
-                characteristic.write_value(bytearray(b'\x01\x05'))
-            if cmd == "poweroff-force":
-                characteristic.write_value(bytearray(b'\x01\x04'))
-            if cmd == "tag":
-                characteristic.write_value(bytearray(b'\x01\x18'))
-            if cmd == "locate on":
-            	characteristic.write_value(bytearray(b'\x03\x16\x01\x01'))
-            if cmd == "locate off":
-            	characteristic.write_value(bytearray(b'\x03\x16\x01\x00'))
-            if cmd == "wifi off":
-                characteristic.write_value(bytearray(b'\x03\x17\x01\x00'))
-            if cmd == "wifi on":
-                characteristic.write_value(bytearray(b'\x03\x17\x01\x01'))
-        #exit()
-
+            elif cmd == "record start":
+                characteristic.write_value(commands.Commands.Shutter.Start)
+            elif cmd == "record stop":
+                characteristic.write_value(commands.Commands.Shutter.Stop)
+            elif cmd == "mode video":
+                characteristic.write_value(commands.Commands.Mode.Video)
+            elif cmd == "mode photo":
+                characteristic.write_value(commands.Commands.Mode.Photo)
+            elif cmd == "mode multishot":
+                characteristic.write_value(commands.Commands.Mode.Multishot)
+            elif cmd == "poweroff":
+                characteristic.write_value(commands.Commands.Basic.PowerOff)
+            elif cmd == "poweroff-force":
+                characteristic.write_value(commands.Commands.Basic.PowerOffForce)
+            elif cmd == "tag":
+                characteristic.write_value(commands.Commands.Basic.HiLightTag)
+            elif cmd == "locate on":
+            	characteristic.write_value(commands.Commands.Locate.ON)
+            elif cmd == "locate off":
+            	characteristic.write_value(commands.Commands.Locate.OFF)
+            elif cmd == "wifi off":
+                characteristic.write_value(commands.Commands.WiFi.OFF)
+            elif cmd == "wifi on":
+                characteristic.write_value(commands.Commands.WiFi.ON)
+            elif cmd.startswith("cmd"):
+                characteristic.write_value(bytearray( cmd.split("cmd" )[1].encode() ))    
+            else:
+            	exit()    
+    def characteristic_value_updated(self, characteristic, value):
+        charsObj = commands.Characteristics()
+        chars =  [a for a in dir(charsObj) if not a.startswith('__')]
+        for namedchar in chars:
+            if getattr(charsObj, namedchar) == characteristic.uuid:   
+                print(">>>", namedchar)
+                print("\t>>>", value.decode("utf-8"))
 device = AnyDevice(mac_address=mac_address, manager=manager)
 device.connect()
 manager.run()
