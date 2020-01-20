@@ -16,7 +16,7 @@ class Commands:
 		ON = bytearray(b'\x03\x16\x01\x01')
 		OFF = bytearray(b'\x03\x16\x01\x00')
 	class WiFi:
-		ON = bytearray(b'\x03\x17\x01\x00')
+		ON = bytearray(b'\x03\x17\x01\x01')
 		OFF = bytearray(b'\x03\x17\x01\x00')
 		
 class Characteristics:
