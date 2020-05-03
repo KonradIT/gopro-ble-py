@@ -4,6 +4,7 @@ from goprocam import GoProCamera, constants
 import time
 import logging
 import commands
+import sys
 
 logger = logging.getLogger('GoPro BLE')
 logger.setLevel(logging.DEBUG)
@@ -25,8 +26,9 @@ def discover_camera():
         print("[{}] {} - {}".format(index, i[0], i[1]))
     return cameras[int(input("ENTER BT GoPro ADDR: "))][1]
 
-mac_address=discover_camera()
+mac_address= sys.argv[1] if len(sys.argv) == 2 else discover_camera()
 
+camera_control_service = None
 
 manager = gatt.DeviceManager(adapter_name='hci0')
 class AnyDevice(gatt.Device):
@@ -41,6 +43,8 @@ class AnyDevice(gatt.Device):
         control_service = next(
             s for s in self.services
             if s.uuid == commands.Characteristics.Control)
+        global camera_control_service
+        camera_control_service = control_service 
 
         time.sleep(5)
         
@@ -57,7 +61,7 @@ class AnyDevice(gatt.Device):
             if c.uuid == commands.Characteristics.SerialNumber)
             
         firmware_version_characteristic.read_value()
-        serial_number_characteristic.read_value()
+        #serial_number_characteristic.read_value()
 
         
         for i in control_service.characteristics:
@@ -96,14 +100,34 @@ class AnyDevice(gatt.Device):
             elif cmd == "wifi on":
                 characteristic.write_value(commands.Commands.WiFi.ON)
             elif cmd.startswith("cmd"):
-                characteristic.write_value(bytearray( cmd.split("cmd" )[1].encode() ))    
+                characteristic.write_value(bytearray( cmd.split("cmd" )[1].encode() ))   
+            elif cmd.startswith("set"):
+                global camera_control_service
+                for i in camera_control_service.characteristics:
+                    if i.uuid.startswith("b5f90074"):
+                        i.write_value(bytearray(b'\x03\x02\x01\x00'))
             else:
-            	exit()    
+            	exit()
+        if characteristic.uuid.startswith("b5f90074"):
+            cmd=input(">> (setmode) ")
+            if cmd == "exit":
+                exit()
+            if cmd == "control":
+                for i in camera_control_service.characteristics:
+                    if i.uuid.startswith("b5f90072"):
+                        i.write_value(commands.Commands.Mode.Video)
+            #Video.RESOLUTION Video.Resolution.R4k
+            if len(cmd.split(" ")) == 2:
+                first = eval("constants." + cmd.split(" ")[0])
+                last = eval("constants." + cmd.split(" ")[1])
+                
+                command = "\x03" + chr(int(first)) + "\x01" + chr(int(last))
+                characteristic.write_value(bytearray(command.encode()))    
     def characteristic_value_updated(self, characteristic, value):
-        charsObj = commands.Characteristics()
-        chars =  [a for a in dir(charsObj) if not a.startswith('__')]
+        chars_obj = commands.Characteristics()
+        chars =  [a for a in dir(chars_obj) if not a.startswith('__')]
         for namedchar in chars:
-            if getattr(charsObj, namedchar) == characteristic.uuid:   
+            if getattr(chars_obj, namedchar) == characteristic.uuid:   
                 print(">>>", namedchar)
                 print("\t>>>", value.decode("utf-8"))
 device = AnyDevice(mac_address=mac_address, manager=manager)
