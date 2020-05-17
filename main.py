@@ -1,4 +1,3 @@
-from bluetooth.ble import DiscoveryService
 import gatt
 from goprocam import GoProCamera, constants
 import time
@@ -6,9 +5,20 @@ import logging
 import commands
 import sys
 
+
+USE_HCITOOL = False
+
+if USE_HCITOOL:
+    import subprocess
+    import os
+    import signal
+else:
+    from bluetooth.ble import DiscoveryService
+    
 logger = logging.getLogger('GoPro BLE')
 logger.setLevel(logging.DEBUG)
 
+adapter_name = sys.argv[2] if len(sys.argv) == 3 else "hci1"
 
 def discover_camera():
     cameras = []
@@ -27,12 +37,28 @@ def discover_camera():
         print("[{}] {} - {}".format(index, i[0], i[1]))
     return cameras[int(input("ENTER BT GoPro ADDR: "))][1]
 
+def discover_camera_using_hcitool():
+    cameras = []
+    command_to_send = "hcitool -i " + adapter_name + " lescan"
+    process = subprocess.Popen(
+        command_to_send.split(), stdout=subprocess.PIPE)
+    time.sleep(3)
+    os.kill(process.pid, signal.SIGINT)
+    output = process.communicate()[0]
 
-mac_address = sys.argv[1] if len(sys.argv) == 2 else discover_camera()
-
+    for addr in str(output).split("\\n"):
+        if "GoPro" in str(addr):
+            cameras.append(str(addr).split(" ")[0])
+    if len(cameras) == 1:
+        return cameras[0][1]
+    for index, i in enumerate(cameras):
+        print("[{}] {}".format(index, i))
+    return cameras[int(input("ENTER BT GoPro ADDR: "))]
+    
+mac_address = sys.argv[1] if len(sys.argv) == 2 else discover_camera_using_hcitool()
 camera_control_service = None
 
-manager = gatt.DeviceManager(adapter_name='hci0')
+manager = gatt.DeviceManager(adapter_name=adapter_name)
 
 
 class AnyDevice(gatt.Device):
