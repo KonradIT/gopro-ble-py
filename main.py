@@ -6,7 +6,9 @@ import commands
 import sys
 
 
-USE_HCITOOL = False
+USE_HCITOOL = True
+
+adapter_name = sys.argv[1] if len(sys.argv) == 2 else "hci1"
 
 if len(sys.argv) == 3:
     mac_address = sys.argv[2]
@@ -59,10 +61,7 @@ else:
         mac_address = discover_camera()
     
 logger = logging.getLogger('GoPro BLE')
-logger.setLevel(logging.DEBUG)
-
-adapter_name = sys.argv[1] if len(sys.argv) == 2 else "hci1"
-    
+logger.setLevel(logging.DEBUG)    
 
 camera_control_service = None
 
