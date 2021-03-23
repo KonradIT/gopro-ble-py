@@ -1,21 +1,33 @@
 # gopro-ble-py
 
-Python Bluetooth controller for GoPro cameras starting from the HERO5 Black (successfully tested with the HERO5 Black, HERO6 Black, HERO7 Black, MAX)
+Python Bluetooth controller for GoPro cameras starting from the HERO5 Black (successfully tested with the HERO5 Black, HERO6 Black, HERO7 Black, MAX, HERO9 Black)
+
+![](https://i.imgur.com/AMluyqy.png)
 
 ## How to run:
 
-Enable WiFi on the GoPro and go to connect > connect new > GoPro APP
+### First pairing:
 
-Then connect to the WiFi AP created by the GoPro
+Enable Wireless Connections on the GoPro and go to connect > connect new > GoPro APP
 
-Make sure you have administrator priviledges so you can send commands from your BT module:
+Then connect your device to the camera via Bluetooth.
 
-    sudo python main.py
+On Windows, make sure when you connect to wait for the PC to successfully pair with the camera:
+
+![](https://i.imgur.com/Z0OzHxC.png)
+
+The camera should return to the last mode and exit the pairing screen.
+
+Then run:
+
+    python main.py
 
 Then enter the commands.
 
     >> record start
     [recv] ...
+
+### Usage:
 
 Commands available:
 
@@ -31,11 +43,42 @@ Commands available:
 -   set (will prompt you to enter settings)
 -   exit (disconnect && exit)
 
-Settings are parsed as constant strings from my library [gopro-py-api](http://github.com/konradit/gopro-py-api). Such as: Video.RESOLUTION Video.Resolution.R4k
+Settings are parsed as constant strings from my library [gopro-py-api](http://github.com/konradit/gopro-py-api).
+
+Settings available:
+
+-   video:
+    -   resolution
+    -   framerate
+    -   fov
+    -   lowlight
+    -   protune
+    -   white_balance
+    -   color
+    -   iso_limit
+    -   sharpness
+
+### Multi-camera:
+
+[Video demo](https://twitter.com/konrad_it/status/1368558805706039303)
+
+Pass a list of Bluetooth MAC addresses in the `--address` parameter to control multiple cameras.
+
+### Using via CLI:
+
+By default this script runs in interactive mode, but to control camera aspects via the command line or a bash script pass `--address` and/or `--command`
 
 ## Scripting possiblilities:
 
-See [start_timelapse.py](./start_timelapse.py) on an example on how to write a script to control a camera programatically.
+Commands can be passed using the `--command` parameter (multi camera supported)
+
+`python .\main.py --verbose --address "XX:XX:XX:XX:XX:XX" --command "record start"`
+
+`python .\main.py --verbose --address "XX:XX:XX:XX:XX:XX" --command "wifi on"`
+
+## What happened to the old version?
+
+It relied on `gatt` library and `bluetooth` library, and it was a PITA to work on and install. I decided to move to `bleak` which works perfectly on Windows and Raspbian.
 
 ## Sources:
 

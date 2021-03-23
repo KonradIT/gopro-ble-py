@@ -1,169 +1,421 @@
-import gatt
-from goprocam import GoProCamera, constants
-import time
+import asyncio
+from bleak import discover
+from bleak import BleakClient, BleakScanner
 import logging
 import commands
-import sys
+from termcolor import colored
+import argparse
+import signal
+from prettytable import PrettyTable
+from goprocam import constants
+
+camera_info_chars = {"00002a00-0000-1000-8000-00805f9b34fb": {
+	"name": "Camera ID"
+},  # Camera ID
+	commands.Characteristics.BatteryLevel: {
+	"name": "Battery Level"
+},  # Battery Level
+	commands.Characteristics.SerialNumber: {
+	"name": "Serial Number"
+},  # Serial
+	commands.Characteristics.FirmwareVersion: {
+	"name": "Firmware Version"
+},  # Firmware version
+	"b5f90002-aa8d-11e3-9046-0002a5d5c51b": {
+		"name": "WiFi SSID"
+},  # SSID
+}
+
+commands_supported = {
+
+	"command": {
+		"record start": {
+			"value": commands.Commands.Shutter.Start,
+		},
+		"record stop": {
+			"value": commands.Commands.Shutter.Stop,
+		},
+		"mode video": {
+			"value": commands.Commands.Mode.Video,
+		},
+		"mode photo": {
+			"value": commands.Commands.Mode.Photo,
+		},
+		"mode multishot": {
+			"value": commands.Commands.Mode.Multishot,
+		},
+		"poweroff": {
+			"value": commands.Commands.Basic.PowerOff,
+		},
+		"poweroff-force": {
+			"value": commands.Commands.Basic.PowerOffForce,
+		},
+		"tag": {
+			"value": commands.Commands.Basic.HiLightTag,
+		},
+		"locate on": {
+			"value": commands.Commands.Locate.ON,
+		},
+		"locate off": {
+			"value": commands.Commands.Locate.OFF,
+		},
+		"wifi on": {
+			"value": commands.Commands.WiFi.ON,
+		},
+		"wifi off": {
+			"value": commands.Commands.WiFi.OFF,
+		},
+	}
+}
+
+settings_supported = {
+	"video": {
+		"resolution": {
+			"first": constants.Video.RESOLUTION,
+			"contents": "constants.Video.Resolution",
+			"prefix": "R"
+		},
+		"framerate": {
+			"first": constants.Video.FRAME_RATE,
+			"contents": "constants.Video.FrameRate",
+			"prefix": "FR"
+		},
+		"fov": {
+			"first": constants.Video.FOV,
+			"contents": "constants.Video.Fov",
+			"prefix": ""
+		},
+		# "aspect_ratio": {
+		# 	"first": constants.Video.ASPECT_RATIO,
+		# 	"contents": "constants.Video.AspectRatio",
+		# 	"prefix": "AP"
+		# },
+		"lowlight": {
+			"first": constants.Video.LOW_LIGHT,
+			"contents": "constants.Video.LowLight",
+			"prefix": ""
+		},
+		# "hypersmooth": {
+		# 	"first": constants.Video.HYPERSMOOTH,
+		# 	"contents": "constants.Video.Hypersmooth",
+		# 	"prefix": ""
+		# },
+		# "lens": {
+		# 	"first": constants.Video.LENS,
+		# 	"contents": "constants.Video.Lens",
+		# 	"prefix": ""
+		# },
+		"protune": {
+			"first": constants.Video.PROTUNE_VIDEO,
+			"contents": "constants.Video.ProTune",
+			"prefix": ""
+		},
+		"white_balance": {
+			"first": constants.Video.WHITE_BALANCE,
+			"contents": "constants.Video.WhiteBalance",
+			"prefix": "WB"
+		},
+		"color": {
+			"first": constants.Video.COLOR,
+			"contents": "constants.Video.Color",
+			"prefix": ""
+		},
+		"iso_limit": {
+			"first": constants.Video.ISO_LIMIT,
+			"contents": "constants.Video.IsoLimit",
+			"prefix": "ISO"
+		},
+		"sharpness": {
+			"first": constants.Video.SHARPNESS,
+			"contents": "constants.Video.Sharpness",
+			"prefix": ""
+		},
+	},
+	"photo": {
+		"resolution": {
+			"first": constants.Photo.RESOLUTION,
+			"contents": "constants.Photo.Resolution",
+			"prefix": "R"
+		},
+		"raw": {
+			"first": constants.Photo.RAW_PHOTO,
+			"contents": "constants.Photo.RawPhoto",
+			"prefix": ""
+		},
+		"superphoto": {
+			"first": constants.Photo.SUPER_PHOTO,
+			"contents": "constants.Photo.SuperPhoto",
+			"prefix": ""
+		},
+		"protune": {
+			"first": constants.Photo.PROTUNE_PHOTO,
+			"contents": "constants.Photo.ProTune",
+			"prefix": ""
+		},
+		"white_balance": {
+			"first": constants.Photo.WHITE_BALANCE,
+			"contents": "constants.Photo.WhiteBalance",
+			"prefix": "WB"
+		},
+		"color": {
+			"first": constants.Photo.COLOR,
+			"contents": "constants.Photo.Color",
+			"prefix": ""
+		},
+		"iso_limit": {
+			"first": constants.Photo.ISO_LIMIT,
+			"contents": "constants.Photo.IsoLimit",
+			"prefix": "ISO"
+		},
+		"iso_min": {
+			"first": constants.Photo.ISO_MIN,
+			"contents": "constants.Photo.IsoMin",
+			"prefix": "ISO"
+		},
+		"sharpness": {
+			"first": constants.Photo.SHARPNESS,
+			"contents": "constants.Photo.Sharpness",
+			"prefix": ""
+		},
+	},
+	"multishot": {
+		"resolution": {
+			"first": constants.Multishot.RESOLUTION,
+			"contents": "constants.Multishot.Resolution",
+			"prefix": "R"
+		},
+		"nightlapse_exp": {
+			"first": constants.Multishot.NIGHT_LAPSE_EXP,
+			"contents": "constants.Multishot.NightLapseExp",
+			"prefix": "Exp"
+		},
+		"nightlapse_interval": {
+			"first": constants.Multishot.NIGHT_LAPSE_INTERVAL,
+			"contents": "constants.Multishot.NightLapseInterval",
+			"prefix": "I"
+		},
+		"timelapse_interval": {
+			"first": constants.Multishot.TIMELAPSE_INTERVAL,
+			"contents": "constants.Multishot.TimeLapseInterval",
+			"prefix": "I"
+		},
+		"burst_rate": {
+			"first": constants.Multishot.BURST_RATE,
+			"contents": "constants.Multishot.BurstRate",
+			"prefix": "B"
+		},
+		"protune": {
+			"first": constants.Multishot.PROTUNE_PHOTO,
+			"contents": "constants.Multishot.ProTune",
+			"prefix": ""
+		},
+		"white_balance": {
+			"first": constants.Multishot.WHITE_BALANCE,
+			"contents": "constants.Multishot.WhiteBalance",
+			"prefix": "WB"
+		},
+		"color": {
+			"first": constants.Multishot.COLOR,
+			"contents": "constants.Multishot.Color",
+			"prefix": ""
+		},
+		"iso_limit": {
+			"first": constants.Multishot.ISO_LIMIT,
+			"contents": "constants.Multishot.IsoLimit",
+			"prefix": "ISO"
+		},
+		"iso_min": {
+			"first": constants.Multishot.ISO_MIN,
+			"contents": "constants.Multishot.IsoMin",
+			"prefix": "ISO"
+		},
+		"sharpness": {
+			"first": constants.Multishot.SHARPNESS,
+			"contents": "constants.Multishot.Sharpness",
+			"prefix": ""
+		},
+	},
+}
+
+start_mode = commands.Commands.Mode.Video
+
+def handle_exit(signal, frame):
+	print("\n\nExiting program. Safe flights.")
+	exit()
 
 
-USE_HCITOOL = False
+async def run(address, command_to_run=None, is_verbose=True):
+	log = logging.getLogger(__name__)
+	log.setLevel(logging.DEBUG if is_verbose else logging.WARNING)
+	async with BleakClient(address) as client:
+		def callback(sender: int, data: bytearray):
+			log.warning(colored("{}: {}".format(sender, data.hex()), "green"))
 
-if USE_HCITOOL:
-    import subprocess
-    import os
-    import signal
-else:
-    from bluetooth.ble import DiscoveryService
-    
-logger = logging.getLogger('GoPro BLE')
-logger.setLevel(logging.DEBUG)
+		caminfo = PrettyTable()
+		caminfo.field_names = [colored("Info", "cyan", attrs=["bold", "underline"]), colored(
+			"Value", "green", attrs=["bold", "underline"])]
+		caminfo.align = "l"
+		for service in client.services:
+			for char in service.characteristics:
+				if "read" in char.properties:
+					if char.uuid not in camera_info_chars:
+						continue
+					try:
+						value = bytes(await client.read_gatt_char(char.uuid))
+						valueinutf = value.decode("utf-8")
+						if char.uuid == "00002a19-0000-1000-8000-00805f9b34fb":
+							valueinutf = str(ord(value)) + "%"
+						caminfo.add_row([colored(camera_info_chars[char.uuid].get(
+							"name"), "cyan"), colored(valueinutf, "green")])
+					except Exception:
+						continue
+		if is_verbose:
+			print(caminfo)
 
-adapter_name = sys.argv[2] if len(sys.argv) == 3 else "hci1"
+		await client.start_notify(commands.Characteristics.CommandNotifications, callback)
+		await client.start_notify(commands.Characteristics.SettingNotifications, callback)
 
-def discover_camera():
-    cameras = []
-    service = DiscoveryService()
-    devices = service.discover(2)
+		if await client.is_connected():
+			log.info("Camera is connected")
+		if command_to_run is None:
+			await client.write_gatt_char(commands.Characteristics.ControlCharacteristic, start_mode)
+		await asyncio.sleep(1.0)
+		signal.signal(signal.SIGINT, handle_exit)
+  
+		if command_to_run is not None:
+			if command_to_run in commands_supported["command"]:
+				await client.write_gatt_char(commands.Characteristics.ControlCharacteristic, commands_supported["command"][command_to_run].get("value"))
 
-    for address, name in devices.items():
-        if name.startswith("GoPro"):
-            cameras.append([name, address])
-    if len(cameras) == 0:
-        print("No cameras detected.")
-        exit()
-    if len(cameras) == 1:
-        return cameras[0][1]
-    for index, i in enumerate(cameras):
-        print("[{}] {} - {}".format(index, i[0], i[1]))
-    return cameras[int(input("ENTER BT GoPro ADDR: "))][1]
+			elif command_to_run.startswith("cmd"):
+				await client.write_gatt_char(commands.Characteristics.ControlCharacteristic,
+											 bytearray(command_to_run.split("cmd")[1].encode()))
+			elif command_to_run.startswith("set"):
 
-def discover_camera_using_hcitool():
-    cameras = []
-    command_to_send = "hcitool -i " + adapter_name + " lescan"
-    process = subprocess.Popen(
-        command_to_send.split(), stdout=subprocess.PIPE)
-    time.sleep(3)
-    os.kill(process.pid, signal.SIGINT)
-    output = process.communicate()[0]
+				if len(command_to_run.strip().split(" ")) != 4:
+					log.error(
+						"Bad syntax. Should be: set [video/photo/multishot/setup] [setting key] [value]")
 
-    for addr in str(output).split("\\n"):
-        if "GoPro" in str(addr):
-            cameras.append(str(addr).split(" ")[0])
-    if len(cameras) == 1:
-        return cameras[0][1]
-    for index, i in enumerate(cameras):
-        print("[{}] {}".format(index, i))
-    return cameras[int(input("ENTER BT GoPro ADDR: "))]
-    
-mac_address = sys.argv[1] if len(sys.argv) == 2 else discover_camera_using_hcitool()
-camera_control_service = None
+				first = 0
+				contents = None
+				prefix = ""
 
-manager = gatt.DeviceManager(adapter_name=adapter_name)
+				section = command_to_run.split(" ")[1]
+				key = command_to_run.split(" ")[2]
+				val = command_to_run.split(" ")[3]
 
+				if section in settings_supported and key in settings_supported[section]:
+					first = settings_supported[section][key]["first"]
+					contents = settings_supported[section][key]["contents"]
+					prefix = settings_supported[section][key]["prefix"]
 
-class AnyDevice(gatt.Device):
+				try:
+					command = "\x03" + \
+						chr(int(first)) + "\x01" + \
+						chr(int(eval(contents + "." + prefix + val)))
+					await client.write_gatt_char(commands.Characteristics.SettingCharacteristic, bytearray(command.encode()))
+				except:
+					log.error("Bad settings combination.")
+			else:
+				log.error("Unrecognized command %s" % command_to_run)
+			return
+		while True:
 
-    def connect_succeeded(self):
-        super().connect_succeeded()
-        print("[%s] Connected" % (self.mac_address))
-        # gopro.pair(usepin=False)
+			cmd = input(">> ")
+			if cmd == "exit":
+				exit()
+			elif cmd == "help":
+				print("Supported commands")
+				for command in commands_supported["command"].keys():
+					print(colored("\t" + command, "yellow"))
+			elif cmd in commands_supported["command"]:
+				await client.write_gatt_char(commands.Characteristics.ControlCharacteristic, commands_supported["command"][cmd].get("value"))
 
-    def services_resolved(self):
-        super().services_resolved()
-        control_service = next(
-            s for s in self.services
-            if s.uuid == commands.Characteristics.Control)
-        global camera_control_service
-        camera_control_service = control_service
+			elif cmd.startswith("cmd"):
+				await client.write_gatt_char(commands.Characteristics.ControlCharacteristic,
+											 bytearray(cmd.split("cmd")[1].encode()))
+			elif cmd.startswith("set"):
 
-        time.sleep(5)
+				if len(cmd.strip().split(" ")) != 4:
+					log.error(
+						"Bad syntax. Should be: set [video/photo/multishot/setup] [setting key] [value]")
 
-        device_information_service = next(
-            s for s in self.services
-            if s.uuid == commands.Characteristics.Info)
+				first = 0
+				contents = None
+				prefix = ""
 
-        firmware_version_characteristic = next(
-            c for c in device_information_service.characteristics
-            if c.uuid == commands.Characteristics.FirmwareVersion)
+				section = cmd.split(" ")[1]
+				key = cmd.split(" ")[2]
+				val = cmd.split(" ")[3]
 
-        serial_number_characteristic = next(
-            c for c in device_information_service.characteristics
-            if c.uuid == commands.Characteristics.SerialNumber)
+				if section in settings_supported and key in settings_supported[section]:
+					first = settings_supported[section][key]["first"]
+					contents = settings_supported[section][key]["contents"]
+					prefix = settings_supported[section][key]["prefix"]
 
-        firmware_version_characteristic.read_value()
-        serial_number_characteristic.read_value()
-        for i in control_service.characteristics:
-            print(i.uuid)
-            if i.uuid.startswith("b5f90072"):
-                i.write_value(bytearray(b'\x03\x02\x01\x00'))
-        pass
-
-    def characteristic_write_value_succeeded(self, characteristic):
-        print("[recv] {}".format(characteristic.uuid))
-        if characteristic.uuid.startswith("b5f90072"):
-            cmd = input(">> ")
-            if cmd == "exit":
-                exit()
-            elif cmd == "record start":
-                characteristic.write_value(commands.Commands.Shutter.Start)
-            elif cmd == "record stop":
-                characteristic.write_value(commands.Commands.Shutter.Stop)
-            elif cmd == "mode video":
-                characteristic.write_value(commands.Commands.Mode.Video)
-            elif cmd == "mode photo":
-                characteristic.write_value(commands.Commands.Mode.Photo)
-            elif cmd == "mode multishot":
-                characteristic.write_value(commands.Commands.Mode.Multishot)
-            elif cmd == "poweroff":
-                characteristic.write_value(commands.Commands.Basic.PowerOff)
-            elif cmd == "poweroff-force":
-                characteristic.write_value(
-                    commands.Commands.Basic.PowerOffForce)
-            elif cmd == "tag":
-                characteristic.write_value(commands.Commands.Basic.HiLightTag)
-            elif cmd == "locate on":
-                characteristic.write_value(commands.Commands.Locate.ON)
-            elif cmd == "locate off":
-                characteristic.write_value(commands.Commands.Locate.OFF)
-            elif cmd == "wifi off":
-                characteristic.write_value(commands.Commands.WiFi.OFF)
-            elif cmd == "wifi on":
-                characteristic.write_value(commands.Commands.WiFi.ON)
-            elif cmd.startswith("cmd"):
-                characteristic.write_value(
-                    bytearray(cmd.split("cmd")[1].encode()))
-            elif cmd.startswith("set"):
-                global camera_control_service
-                for i in camera_control_service.characteristics:
-                    if i.uuid.startswith("b5f90074"):
-                        i.write_value(bytearray(b'\x03\x02\x01\x00'))
-            else:
-                exit()
-        if characteristic.uuid.startswith("b5f90074"):
-            cmd = input(">> (setmode) ")
-            if cmd == "exit":
-                exit()
-            if cmd == "control":
-                for i in camera_control_service.characteristics:
-                    if i.uuid.startswith("b5f90072"):
-                        i.write_value(commands.Commands.Mode.Video)
-            # Video.RESOLUTION Video.Resolution.R4k
-            if len(cmd.split(" ")) == 2:
-                first = eval("constants." + cmd.split(" ")[0])
-                last = eval("constants." + cmd.split(" ")[1])
-
-                command = "\x03" + chr(int(first)) + "\x01" + chr(int(last))
-                characteristic.write_value(bytearray(command.encode()))
-
-    def characteristic_value_updated(self, characteristic, value):
-        chars_obj = commands.Characteristics()
-        chars = [a for a in dir(chars_obj) if not a.startswith('__')]
-        for namedchar in chars:
-            if getattr(chars_obj, namedchar) == characteristic.uuid:
-                print(">>>", namedchar)
-                print("\t>>>", value.decode("utf-8"))
+				try:
+					command = "\x03" + \
+						chr(int(first)) + "\x01" + \
+						chr(int(eval(contents + "." + prefix + val)))
+					await client.write_gatt_char(commands.Characteristics.SettingCharacteristic, bytearray(command.encode()))
+				except:
+					log.error("Bad settings combination.")
+			else:
+				log.error("Unrecognized command %s" % cmd)
 
 
-device = AnyDevice(mac_address=mac_address, manager=manager)
-device.connect()
-manager.run()
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--interactive', "-i", help="Interactive control shell",
+						required=False, type=bool, default=True)
+	parser.add_argument('--address', "-a", help="Camera BLE HW address",
+						required=False, default=[], action="append", nargs="+")
+	parser.add_argument(
+		'--command', "-c", help="Execute command, overrides `-i`", required=False, type=str)
+	parser.add_argument(
+		'--from-file', "-f", help="Execute instructions from file", required=False, default="")
+	parser.add_argument('--verbose', dest='verbose', action='store_true')
+	parser.add_argument('--no-verbose', dest='verbose', action='store_false')
+	parser.set_defaults(verbose=True)
+	args = parser.parse_args()
+ 
+	command_to_run = None
+	is_verbose = args.verbose
+	if args.address == []:
+
+		async def discovercameras():
+			cameras = []
+			devices = await discover()
+			global address
+			for d in devices:
+
+				if "GoPro" in str(d):
+					cameras.append(["GoPro", d.address])
+			if len(cameras) == 0:
+				print("No cameras detected.")
+				exit()
+			if len(cameras) == 1:
+				print(colored("Connecting to " +
+							  cameras[0][1], "green", attrs=["bold"]))
+				address = [cameras[0][1]]
+			else:
+				for index, i in enumerate(cameras):
+					print(
+						colored("[{}] {} - {}".format(index, i[0], i[1]), "cyan"))
+				address = [cameras[int(input(">>> "))][1]]
+
+		loop = asyncio.get_event_loop()
+		loop.run_until_complete(discovercameras())
+	else:
+		address = args.address[0]
+	if args.command != "":
+		command_to_run = args.command
+		args.interactive = False
+	if args.interactive:
+		command_to_run=None
+		if len(address) > 1:
+			print("Only one camera supported in interactive mode")
+			exit()
+	loop = asyncio.get_event_loop()
+	loop.set_debug(False)
+	tasks = asyncio.gather(*(run(add, command_to_run, is_verbose) for add in address))
+	loop.run_until_complete(tasks)

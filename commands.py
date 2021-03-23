@@ -1,5 +1,5 @@
 BLE_CHAR_STRING = "0000{}-0000-1000-8000-00805f9b34fb"
-
+BLE_CHAR_V2_STRING = "{}-aa8d-11e3-9046-0002a5d5c51b"
 class Commands:
 	class Shutter:
 		Start = bytearray(b'\x03\x01\x01\x01')
@@ -27,3 +27,9 @@ class Characteristics:
 	FirmwareVersion = BLE_CHAR_STRING.format("2A26".lower())
 	SerialNumber = BLE_CHAR_STRING.format("2A25".lower())
 	BatteryLevel = BLE_CHAR_STRING.format("2A19".lower())
+
+	ControlCharacteristic = BLE_CHAR_V2_STRING.format("B5F90072".lower())
+	SettingCharacteristic = BLE_CHAR_V2_STRING.format("B5F90074".lower())
+
+	CommandNotifications = BLE_CHAR_V2_STRING.format("B5F90073".lower())
+	SettingNotifications = BLE_CHAR_V2_STRING.format("B5F90075".lower())
