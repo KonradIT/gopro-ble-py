@@ -44,6 +44,27 @@ commands_supported = {
 		"mode multishot": {
 			"value": commands.Commands.Mode.Multishot,
 		},
+		"mode video single":{
+			"value": commands.Commands.Submode.Video.Single
+		},
+  		"mode video timelapse":{
+			"value": commands.Commands.Submode.Video.TimeLapse
+		},
+		"mode photo single":{
+			"value": commands.Commands.Submode.Photo.Single
+		},
+		"mode photo night":{
+			"value": commands.Commands.Submode.Photo.Night
+		},
+		"mode multishot burst":{
+			"value": commands.Commands.Submode.Multishot.Burst
+		},
+		"mode multishot timelapse":{
+			"value": commands.Commands.Submode.Multishot.TimeLapse
+		},
+		"mode multishot nightlapse":{
+			"value": commands.Commands.Submode.Multishot.NightLapse
+		},
 		"poweroff": {
 			"value": commands.Commands.Basic.PowerOff,
 		},
@@ -205,7 +226,7 @@ settings_supported = {
 			"prefix": "B"
 		},
 		"protune": {
-			"first": constants.Multishot.PROTUNE_PHOTO,
+			"first": constants.Multishot.PROTUNE_MULTISHOT,
 			"contents": "constants.Multishot.ProTune",
 			"prefix": ""
 		},

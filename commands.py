@@ -8,6 +8,18 @@ class Commands:
 		Video = bytearray(b'\x03\x02\x01\x00')
 		Photo = bytearray(b'\x03\x02\x01\x01')
 		Multishot = bytearray(b'\x03\x02\x01\x02')
+	class Submode:
+		class Video:
+			Single =    bytearray(b'\x05\x03\x01\x00\x01\x00')
+			TimeLapse = bytearray(b'\x05\x03\x01\x00\x01\x01')
+		class Photo:
+			Single = bytearray(b'\x05\x03\x01\x01\x01\x01')
+			Night = bytearray(b'\x05\x03\x01\x01\x01\x02')
+		class Multishot:	
+			Burst =      bytearray(b'\x05\x03\x01\x02\x01\x00')
+			TimeLapse =  bytearray(b'\x05\x03\x01\x02\x01\x01')
+			NightLapse = bytearray(b'\x05\x03\x01\x02\x01\x02')
+
 	class Basic:
 		PowerOff = bytearray(b'\x01\x05')
 		PowerOffForce = bytearray(b'\x01\x04')
