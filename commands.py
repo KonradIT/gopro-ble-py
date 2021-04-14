@@ -30,7 +30,31 @@ class Commands:
 	class WiFi:
 		ON = bytearray(b'\x03\x17\x01\x01')
 		OFF = bytearray(b'\x03\x17\x01\x00')
-		
+
+	# OpenGoPro commands
+	class Presets:
+		Activity = bytearray(b'\x06\x40\x04\x00\x00\x00\x01')
+		BurstPhoto = bytearray(b'\x06\x40\x04\x00\x01\x00\x02')
+		Cinematic = bytearray(b'\x06\x40\x04\x00\x00\x00\x02')
+		LiveBurst = bytearray(b'\x06\x40\x04\x00\x01\x00\x01')
+		NightPhoto = bytearray(b'\x06\x40\x04\x00\x01\x00\x03')
+		NightLapse = bytearray(b'\x06\x40\x04\x00\x02\x00\x02')
+		Photo = bytearray(b'\x06\x40\x04\x00\x01\x00\x00')
+		SloMo = bytearray(b'\x06\x40\x04\x00\x00\x00\x03')
+		Standard = bytearray(b'\x06\x40\x04\x00\x00\x00\x00')
+		TimeLapse = bytearray(b'\x06\x40\x04\x00\x02\x00\x01')
+		TimeWarp = bytearray(b'\x06\x40\x04\x00\x02\x00\x00')
+		MaxPhoto = bytearray(b'\x06\x40\x04\x00\x04\x00\x00')
+		MaxTimewarp = bytearray(b'\x06\x40\x04\x00\x05\x00\x00')
+		MaxVideo = bytearray(b'\x06\x40\x04\x00\x03\x00\x00')
+	class PresetGroups:
+		Video = bytearray(b'\x04\x3E\x02\x03\xE8')
+		Photo = bytearray(b'\x04\x3E\x02\x03\xE9')
+		Timelapse = bytearray(b'\x04\x3E\x02\x03\xEA')
+	class Turbo:
+		ON = bytearray(b'\x04\xF1\x6B\x08\x01')
+		OFF = bytearray(b'\x04\xF1\x6B\x08\x00')
+
 class Characteristics:
 	Control = BLE_CHAR_STRING.format("FEA6".lower())
 	Info = BLE_CHAR_STRING.format("180A".lower())
@@ -45,3 +69,6 @@ class Characteristics:
 
 	CommandNotifications = BLE_CHAR_V2_STRING.format("B5F90073".lower())
 	SettingNotifications = BLE_CHAR_V2_STRING.format("B5F90075".lower())
+ 
+	StatusCharacteristic = BLE_CHAR_V2_STRING.format("B5F90076".lower())
+	StatusNotifications = BLE_CHAR_V2_STRING.format("B5F90077".lower())

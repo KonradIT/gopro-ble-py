@@ -86,6 +86,65 @@ commands_supported = {
 		"wifi off": {
 			"value": commands.Commands.WiFi.OFF,
 		},
+  
+		# OpenGoPro-spec commands
+		"preset activity": {
+			"value": commands.Commands.Presets.Activity
+		},
+		"preset burst": {
+			"value": commands.Commands.Presets.BurstPhoto
+		},
+		"preset cinematic": {
+			"value": commands.Commands.Presets.Cinematic
+		},
+		"preset liveburst": {
+			"value": commands.Commands.Presets.LiveBurst
+		},
+		"preset nightphoto": {
+			"value": commands.Commands.Presets.NightPhoto
+		},
+		"preset nightlapse": {
+			"value": commands.Commands.Presets.NightLapse
+		},
+		"preset photo": {
+			"value": commands.Commands.Presets.Photo
+		},
+		"preset slomo": {
+			"value": commands.Commands.Presets.SloMo
+		},
+		"preset standard": {
+			"value": commands.Commands.Presets.Standard
+		},
+		"preset timelapse": {
+			"value": commands.Commands.Presets.TimeLapse
+		},
+		"preset timewarp": {
+			"value": commands.Commands.Presets.TimeWarp
+		},
+		"preset maxphoto": {
+			"value": commands.Commands.Presets.MaxPhoto
+		},
+		"preset maxtimewarp": {
+			"value": commands.Commands.Presets.MaxTimewarp
+		},
+		"preset maxvideo": {
+			"value": commands.Commands.Presets.MaxVideo
+		},
+		"preset group video": {
+			"value": commands.Commands.PresetGroups.Video
+		},
+		"preset group photo": {
+			"value": commands.Commands.PresetGroups.Photo
+		},
+		"preset group multishot": {
+			"value": commands.Commands.PresetGroups.Timelapse
+		},
+		"turbo on": {
+			"value": commands.Commands.Turbo.ON
+		},
+  		"turbo off": {
+			"value": commands.Commands.Turbo.OFF
+		}
 	}
 }
 
@@ -295,6 +354,7 @@ async def run(address, command_to_run=None, is_verbose=True):
 
 		await client.start_notify(commands.Characteristics.CommandNotifications, callback)
 		await client.start_notify(commands.Characteristics.SettingNotifications, callback)
+		await client.start_notify(commands.Characteristics.StatusNotifications, callback)
 
 		if await client.is_connected():
 			log.info("Camera is connected")
