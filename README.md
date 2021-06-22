@@ -4,6 +4,10 @@ Python Bluetooth controller for GoPro cameras starting from the HERO5 Black (suc
 
 ![](https://i.imgur.com/AMluyqy.png)
 
+# Important note regarding OpenGoPro:
+
+GoPro released a proper BLE documentation over at [opengopro](https://gopro.com/OpenGoPro) and it matches what I've reverse engineered in the past. But they've done _so much stuff_ I missed, such as getting the status of the camera and doing Protobuf decoding. Their [examples](https://gopro.github.io/OpenGoPro/demos/python/sdk_wireless_camera_control) are extremely well programmed too.
+
 ## How to run:
 
 ### First pairing:
