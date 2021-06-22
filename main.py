@@ -360,6 +360,7 @@ async def run(address, command_to_run=None, is_verbose=True):
 			log.info("Camera is connected")
 		if command_to_run is None:
 			await client.write_gatt_char(commands.Characteristics.ControlCharacteristic, start_mode)
+		await client.write_gatt_char(commands.Characteristics.ControlCharacteristic, commands.Commands.Analytics.SetThirdPartyClient)
 		await asyncio.sleep(1.0)
 		signal.signal(signal.SIGINT, handle_exit)
   

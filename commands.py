@@ -54,7 +54,9 @@ class Commands:
 	class Turbo:
 		ON = bytearray(b'\x04\xF1\x6B\x08\x01')
 		OFF = bytearray(b'\x04\xF1\x6B\x08\x00')
-
+	class Analytics:
+		SetThirdPartyClient = bytearray(b'\x01\x50')
+  
 class Characteristics:
 	Control = BLE_CHAR_STRING.format("FEA6".lower())
 	Info = BLE_CHAR_STRING.format("180A".lower())
