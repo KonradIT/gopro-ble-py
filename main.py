@@ -296,7 +296,7 @@ async def run(address, command_to_run=None, is_verbose=True):
 		await client.start_notify(commands.Characteristics.CommandNotifications, callback)
 		await client.start_notify(commands.Characteristics.SettingNotifications, callback)
 
-		if await client.is_connected():
+		if client.is_connected:
 			log.info("Camera is connected")
 		if command_to_run is None:
 			await client.write_gatt_char(commands.Characteristics.ControlCharacteristic, start_mode)
