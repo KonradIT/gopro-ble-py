@@ -24,6 +24,9 @@ camera_info_chars = {"00002a00-0000-1000-8000-00805f9b34fb": {
 	"b5f90002-aa8d-11e3-9046-0002a5d5c51b": {
 		"name": "WiFi SSID"
 },  # SSID
+ 	"b5f90003-aa8d-11e3-9046-0002a5d5c51b": {
+		"name": "WiFi Password"
+},  # pwd
 }
 
 commands_supported = {
@@ -209,7 +212,7 @@ settings_supported = {
 			"first": constants.Video.SHARPNESS,
 			"contents": "constants.Video.Sharpness",
 			"prefix": ""
-		},
+		}
 	},
 	"photo": {
 		"resolution": {
@@ -255,6 +258,11 @@ settings_supported = {
 		"sharpness": {
 			"first": constants.Photo.SHARPNESS,
 			"contents": "constants.Photo.Sharpness",
+			"prefix": ""
+		},
+  		"ev_comp": {
+			"first": "118",
+			"contents": "constants.Photo.EvComp",
 			"prefix": ""
 		},
 	},
@@ -328,6 +336,7 @@ async def run(address, command_to_run=None, is_verbose=True):
 	log = logging.getLogger(__name__)
 	log.setLevel(logging.DEBUG if is_verbose else logging.WARNING)
 	async with BleakClient(address) as client:
+		event = asyncio.Event()
 		def callback(sender: int, data: bytearray):
 			log.warning(colored("{}: {}".format(sender, data.hex()), "green"))
 
@@ -441,8 +450,20 @@ async def run(address, command_to_run=None, is_verbose=True):
 					await client.write_gatt_char(commands.Characteristics.SettingCharacteristic, bytearray(command.encode()))
 				except:
 					log.error("Bad settings combination.")
+			elif cmd == "get-status":
+				event.clear()
+				await client.write_gatt_char(commands.Characteristics.StatusCharacteristic, bytearray([1, 12]))
+				await event.wait()
+				event.clear()
+				await client.write_gatt_char(commands.Characteristics.StatusCharacteristic, bytearray([2, 53, 13]))
+				await event.wait()
+			elif cmd == "get-settings":
+				event.clear()
+				await client.write_gatt_char(commands.Characteristics.StatusCharacteristic, bytearray([1, 13]))
+				await event.wait()
 			else:
 				log.error("Unrecognized command %s" % cmd)
+
 
 
 if __name__ == "__main__":
